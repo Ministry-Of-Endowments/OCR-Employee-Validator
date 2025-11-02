@@ -1,22 +1,30 @@
-# how to run 
+# How to Run
 
-navigate to the directory of the source code 
-```
+## Setup
+
+Navigate to the directory of the source code:
+```bash
 cd src/
 ```
-activate the virtual environment
+
+Create a virtual environment (first time only):
+```bash
+python -m venv env
 ```
+
+Activate the virtual environment:
+```bash
 source env/bin/activate
 ```
 
-install the required packages 
-
-```
+Install the required packages:
+```bash
 pip install -r requirements.txt 
 ```
 
-run the GUI
+## Running the Application
 
-```
+Run the GUI:
+```bash
 python gui.py 
 ```
