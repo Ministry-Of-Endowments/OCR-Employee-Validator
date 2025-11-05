@@ -443,10 +443,10 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         excel_filename = sys.argv[1]
     else:
-        excel_filename = "employees_updated.xlsx"
+        excel_filename = "تصدير_طلبات_النقل_2025-11-01_إلي_2025-11-02/طلبات_النقل_2025-11-01_إلي_2025-11-02.xlsx"
     
     excel_file = os.path.join(parent_dir, excel_filename)
-    test_folder = os.path.join(parent_dir, "TESTFOLDER")
+    test_folder = os.path.join(parent_dir, "تصدير_طلبات_النقل_2025-11-01_إلي_2025-11-02")
     output_file = os.path.join(parent_dir, f"employees_validated_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
     
     process_employees(excel_file, test_folder, output_file)
