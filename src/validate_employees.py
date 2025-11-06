@@ -355,7 +355,7 @@ def validate_document(file_path: str, ocr_processor: EasyOCRProcessor, verbose: 
         return {"success": False, "error": str(e), "text": ""}
 
 
-def process_employees(excel_file: str, test_folder: str, output_file: str = "validation_results.xlsx"):
+def process_employees(excel_file: str, test_folder: str, output_file: str = None):
     print("=" * 80)
     print("EMPLOYEE DOCUMENT VALIDATION SCRIPT")
     print("=" * 80)
@@ -364,6 +364,10 @@ def process_employees(excel_file: str, test_folder: str, output_file: str = "val
     df = pd.read_excel(excel_file)
     
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+    
+    if output_file is None:
+        base_name = os.path.splitext(os.path.basename(excel_file))[0]
+        output_file = os.path.join(os.path.dirname(excel_file), f"{base_name}_validated_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
     
     print(f"Total employees: {len(df)}")
     print(f"Test folder: {test_folder}")
@@ -376,10 +380,19 @@ def process_employees(excel_file: str, test_folder: str, output_file: str = "val
         print(f"Available columns: {df.columns.tolist()}")
         return
     
+    if validation_column not in df.columns:
+        column_position = df.columns.get_loc(document_column) + 1
+        df.insert(column_position, validation_column, 0)
+    else:
+        df[validation_column] = 0
+    
+    print(f"\nCreating working copy: {output_file}")
+    df.to_excel(output_file, index=False, engine='openpyxl')
+    print("Working copy created successfully!")
+    
     print(f"\nInitializing OCR processor...")
     ocr_processor = EasyOCRProcessor()
     
-    validation_results = []
     valid_count = 0
     invalid_count = 0
     error_count = 0
@@ -393,33 +406,37 @@ def process_employees(excel_file: str, test_folder: str, output_file: str = "val
         
         print(f"\n[{idx + 1}/{len(df)}] Processing: {employee_name}")
         
+        validation_value = 0
+        
         if pd.isna(document_filename) or not document_filename:
             print(f"No document specified")
-            validation_results.append(0)
+            validation_value = 0
             error_count += 1
-            continue
-        
-        file_path = os.path.join(test_folder, document_filename)
-        
-        if not os.path.exists(file_path):
-            print(f"File not found: {document_filename}")
-            validation_results.append(0)
-            error_count += 1
-            continue
-        
-        print(f"Validating: {document_filename}")
-        validation_result = validate_document(file_path, ocr_processor, verbose=False)
-        
-        if validation_result['success']:
-            print(f"VALID")
-            validation_results.append(1)
-            valid_count += 1
         else:
-            print(f"INVALID: {validation_result['error']}")
-            validation_results.append(0)
-            invalid_count += 1
-    
-    df[validation_column] = validation_results
+            file_path = os.path.join(test_folder, document_filename)
+            
+            if not os.path.exists(file_path):
+                print(f"File not found: {document_filename}")
+                validation_value = 0
+                error_count += 1
+            else:
+                print(f"Validating: {document_filename}")
+                validation_result = validate_document(file_path, ocr_processor, verbose=False)
+                
+                if validation_result['success']:
+                    print(f"✓ VALID")
+                    validation_value = 1
+                    valid_count += 1
+                else:
+                    print(f"✗ INVALID: {validation_result['error']}")
+                    validation_value = 0
+                    invalid_count += 1
+        
+        df.at[idx, validation_column] = validation_value
+        
+        if (idx + 1) % 5 == 0 or idx == len(df) - 1:
+            df.to_excel(output_file, index=False, engine='openpyxl')
+            print(f"Progress saved ({idx + 1}/{len(df)})")
     
     print("\n" + "=" * 80)
     print("VALIDATION COMPLETE")
@@ -441,12 +458,11 @@ if __name__ == "__main__":
     parent_dir = os.path.dirname(script_dir)
     
     if len(sys.argv) > 1:
-        excel_filename = sys.argv[1]
+        excel_file = sys.argv[1]
     else:
-        excel_filename = "تصدير_طلبات_النقل_2025-11-01_إلي_2025-11-02/طلبات_النقل_2025-11-01_إلي_2025-11-02.xlsx"
+        excel_file = os.path.join(parent_dir, "طلبات_النقل_2025-11-01_إلي_2025-11-02.xlsx")
     
-    excel_file = os.path.join(parent_dir, excel_filename)
+    excel_dir = os.path.dirname(excel_file)
     test_folder = os.path.join(parent_dir, "تصدير_طلبات_النقل_2025-11-01_إلي_2025-11-02")
-    output_file = os.path.join(parent_dir, f"employees_validated_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
     
-    process_employees(excel_file, test_folder, output_file)
+    process_employees(excel_file, test_folder)
